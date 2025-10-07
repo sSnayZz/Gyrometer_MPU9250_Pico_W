@@ -83,6 +83,14 @@ int main() {
     calibrate(500); // exemple : 500 échantillons
 
     while (1) {
+
+        // init LED
+        gpio_init(2);
+        gpio_set_dir(2, true);
+
+        gpio_init(3);
+        gpio_set_dir(3, true);
+        
         int16_t ax_raw, ay_raw, az_raw, temp, gx_raw, gy_raw, gz_raw;
         mpu_read_raw(&ax_raw,&ay_raw,&az_raw,&temp,&gx_raw,&gy_raw,&gz_raw);
 
@@ -111,6 +119,22 @@ int main() {
         printf("Ax=%.3fg Ay=%.3fg Az=%.3fg | Gx=%.2fdps Gy=%.2fdps Gz=%.2fdps | T=%.2fC\n",
                ax_g, ay_g, az_g, gx_dps, gy_dps, gz_dps, temp_c);
 
+        if(ax_g > 0.300 || ax_g < -0.300)
+        {
+            gpio_put(2, 1);
+        }
+        else {
+            gpio_put(2, 0);
+        }
+
+        if(ay_g > 0.300 || ay_g < -0.300)
+        {
+            gpio_put(3, 1);
+        }
+        else {
+            gpio_put(3, 0);
+        }
+        
         sleep_ms(80);
     }
 }
