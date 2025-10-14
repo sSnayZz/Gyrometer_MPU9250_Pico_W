@@ -2,10 +2,14 @@
 #include <math.h>
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
+#include "pico/stdlib.h"
+#include "hardware/pwm.h"
+#include "hardware/clocks.h"
 
 #define I2C_PORT i2c0
 #define SDA_PIN 20
 #define SCL_PIN 21
+#define ESC_PIN 15
 
 #define MPU9250_ADDR 0x68
 #define REG_PWR_MGMT_1    0x6B
@@ -81,10 +85,49 @@ int main() {
     sleep_ms(500);
     printf("Starting calibration (place sensor flat and keep still)...\n");
     calibrate(500); // exemple : 500 échantillons
+   stdio_init_all();
+
+    // Configuration PWM
+    gpio_set_function(ESC_PIN, GPIO_FUNC_PWM);
+    uint slice_num = pwm_gpio_to_slice_num(ESC_PIN);
+
+    // Fréquence souhaitée = 50 Hz
+    float freq = 50.0f;
+    float clkdiv;
+    uint16_t wrap;
+
+    // Calcul automatique du wrap et du diviseur
+    // Clock par défaut du PWM = 125 MHz
+    float pwm_clock = 125000000.0f;
+    wrap = 20000;                    // Valeur pour une période de 20 ms
+    clkdiv = pwm_clock / (freq * (wrap + 1));
+
+    pwm_set_clkdiv(slice_num, clkdiv);
+    pwm_set_wrap(slice_num, wrap);
+
+    pwm_set_enabled(slice_num, true);
+
+    // Largeurs d’impulsion correspondantes
+    uint16_t pulse_min = 1000;  // 1 ms
+    uint16_t pulse_max = 2000;  // 2 ms
+    uint16_t pulse_mid = 1500;  // 1.5 ms
+
+    // Calibration ESC (max → min)
+    pwm_set_gpio_level(ESC_PIN, pulse_max);
+    sleep_ms(2000);
+    pwm_set_gpio_level(ESC_PIN, pulse_min);
+    sleep_ms(2000);
+
+    // Démarrage neutre
+    pwm_set_gpio_level(ESC_PIN, pulse_min);
+    sleep_ms(2000);
 
     while (1) {
 
         // init LED
+        gpio_init(1); 
+        gpio_set_dir(1, true);
+
         gpio_init(2);
         gpio_set_dir(2, true);
 
@@ -134,7 +177,16 @@ int main() {
         else {
             gpio_put(3, 0);
         }
+
+        if(az_g < -1.8)
+        {
+            gpio_put(1, 1);
+        }
+        else {
+            gpio_put(1, 0);
+        }
         
         sleep_ms(80);
+       
     }
 }

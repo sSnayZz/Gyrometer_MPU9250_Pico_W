@@ -57,7 +57,9 @@ target_include_directories(Gyrometer_MPU9250_Pico_W PRIVATE
 target_link_libraries(Gyrometer_MPU9250_Pico_W 
         hardware_i2c
         pico_cyw43_arch_none
+        hardware_pwm
         )
 
 pico_add_extra_outputs(Gyrometer_MPU9250_Pico_W)
+
 
