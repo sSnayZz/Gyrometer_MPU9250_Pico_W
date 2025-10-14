@@ -3,13 +3,10 @@
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
 #include "pico/stdlib.h"
-#include "hardware/pwm.h"
-#include "hardware/clocks.h"
 
 #define I2C_PORT i2c0
 #define SDA_PIN 20
 #define SCL_PIN 21
-#define ESC_PIN 15
 
 #define MPU9250_ADDR 0x68
 #define REG_PWR_MGMT_1    0x6B
