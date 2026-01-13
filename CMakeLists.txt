@@ -35,7 +35,7 @@ pico_sdk_init()
 
 # Add executable. Default name is the project name, version 0.1
 
-add_executable(Gyrometer_MPU9250_Pico_W Gyrometer_MPU9250_Pico_W.c )
+add_executable(Gyrometer_MPU9250_Pico_W Gyrometer_MPU9250_Pico_W.c ssd1306.c)
 
 pico_set_program_name(Gyrometer_MPU9250_Pico_W "Gyrometer_MPU9250_Pico_W")
 pico_set_program_version(Gyrometer_MPU9250_Pico_W "0.1")

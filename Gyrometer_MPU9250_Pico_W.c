@@ -2,12 +2,17 @@
 #include <math.h>
 #include "pico/stdlib.h"
 #include "hardware/i2c.h"
+#include "ssd1306.h"
 
 // CONFIGURATION
 
-#define I2C_PORT i2c0
-#define SDA_PIN 4
-#define SCL_PIN 5
+#define MPU_I2C_PORT i2c0
+#define OLED_I2C_PORT i2c1
+#define MPU_SDA_PIN 4
+#define MPU_SCL_PIN 5
+#define OLED_SCL_PIN 27
+#define OLED_SDA_PIN 26
+
 
 #define MPU_ADDR 0x68
 
@@ -27,11 +32,12 @@
 int32_t ax_off = 0, ay_off = 0, az_off = 0;
 int32_t gx_off = 0, gy_off = 0, gz_off = 0;
 
-
+char buffer[24];
+ssd1306_t disp;
 
 void mpu_write(uint8_t reg, uint8_t val) {
     uint8_t buf[2] = {reg, val};
-    i2c_write_blocking(I2C_PORT, MPU_ADDR, buf, 2, false);
+    i2c_write_blocking(MPU_I2C_PORT, MPU_ADDR, buf, 2, false);
 }
 
 void mpu_read_raw(int16_t *ax, int16_t *ay, int16_t *az,
@@ -39,8 +45,8 @@ void mpu_read_raw(int16_t *ax, int16_t *ay, int16_t *az,
     uint8_t reg = REG_ACCEL_XOUT;
     uint8_t buf[14];
 
-    i2c_write_blocking(I2C_PORT, MPU_ADDR, &reg, 1, true);
-    i2c_read_blocking(I2C_PORT, MPU_ADDR, buf, 14, false);
+    i2c_write_blocking(MPU_I2C_PORT, MPU_ADDR, &reg, 1, true);
+    i2c_read_blocking(MPU_I2C_PORT, MPU_ADDR, buf, 14, false);
 
     *ax = (buf[0] << 8) | buf[1];
     *ay = (buf[2] << 8) | buf[3];
@@ -105,14 +111,25 @@ int main() {
     sleep_ms(2000);
 
     /* I2C */
-    i2c_init(I2C_PORT, 400 * 1000);
-    gpio_set_function(SDA_PIN, GPIO_FUNC_I2C);
-    gpio_set_function(SCL_PIN, GPIO_FUNC_I2C);
-    gpio_pull_up(SDA_PIN);
-    gpio_pull_up(SCL_PIN);
+    i2c_init(MPU_I2C_PORT, 400 * 1000);
+    gpio_set_function(MPU_SDA_PIN, GPIO_FUNC_I2C);
+    gpio_set_function(MPU_SCL_PIN, GPIO_FUNC_I2C);
+    gpio_pull_up(MPU_SDA_PIN);
+    gpio_pull_up(MPU_SCL_PIN);
 
+    // Initialisation I2C OLED
+    i2c_init(OLED_I2C_PORT, 400000);
+    gpio_set_function(OLED_SDA_PIN, GPIO_FUNC_I2C);
+    gpio_set_function(OLED_SCL_PIN, GPIO_FUNC_I2C);
+    gpio_pull_up(OLED_SDA_PIN);
+    gpio_pull_up(OLED_SCL_PIN);
 
     mpu_init();
+    ssd1306_init(&disp, 128, 64, false, 0x3C, OLED_I2C_PORT);
+    ssd1306_clear(&disp);
+
+    ssd1306_draw_string(&disp, 8, 32, true, "Calibration...");
+    ssd1306_show(&disp);
     mpu_calibrate(500);
 
     while (1) {
@@ -148,7 +165,30 @@ int main() {
             temp_c
         );
 
+        ssd1306_clear(&disp);
+
+        ssd1306_draw_string(&disp, 0, 0, true, "MPU9250 - Donnees");
+
+        sprintf(buffer, "AX: %2.2f g", ax_ms2);
+        ssd1306_draw_string(&disp, 2, 16, true, buffer);
+        
+        sprintf(buffer, "AY: %2.2f g", ay_ms2);
+        ssd1306_draw_string(&disp, 2, 24, true, buffer);
+        
+        sprintf(buffer, "AZ: %2.2f g", az_ms2);
+        ssd1306_draw_string(&disp, 2, 32, true, buffer);
+        
+        sprintf(buffer, "GX: %2.1f dps", gx_rads);
+        ssd1306_draw_string(&disp, 2, 40, true, buffer);
+        
+        sprintf(buffer, "GY: %2.1f dps", gy_rads);
+        ssd1306_draw_string(&disp, 2, 48, true, buffer);
+
+        sprintf(buffer, "GZ: %2.1f dps", gz_rads);
+        ssd1306_draw_string(&disp, 2, 56, true, buffer);
+
+        ssd1306_show(&disp);
        
-        sleep_ms(50);
+        sleep_ms(200);
     }
 }
